@@ -2,9 +2,24 @@
 </head>
 
 <body>
-    <%- include('../includes/navigation.ejs') %>
+  <%- include('../includes/navigation.ejs') %>
 
-    <main>
-        <h1>Your cart is empty. Add items before checkout.</h1>
-    </main>
+  <main>
+    <% if (products.length > 0) { %>
+      <ul>
+
+        <% for (let product of products) { %>
+          <p>
+            <li><%= product.title %> (<%= product.qty %>)</li>
+          </p>
+          <form action="/cart-delete-product" method="POST">
+            <input type="hidden" name="productId" value="<%= product.id %>">
+            <button type="submit" class="btn">Delete</button>
+          </form>
+            <% } %>
+          </ul>
+    <% } else { %>
+      <h1>Your cart is empty. Add items before checkout.</h1>
+    <% } %>
+  </main>
 <%- include('../includes/end.ejs') %>
