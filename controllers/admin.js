@@ -1,16 +1,20 @@
 const Product = require("../models/product");
 
-exports.getAdminProducts = (req, res, next) => {
-  Product.fetchAll((products) =>
-    res.render("admin/products", {
-      prods: products,
-      pageTitle: "Admin Products",
-      path: "/admin/products",
-    })
-  );
+exports.getAdminProducts = async (req, res) => {
+  let prods;
+  try {
+    prods = await req.user.getProducts();
+  } catch (error) {
+    console.error(error);
+  }
+  res.render("admin/products", {
+    prods,
+    pageTitle: "Admin Products",
+    path: "/admin/products",
+  });
 };
 
-exports.getAddProduct = (req, res, next) => {
+exports.getAddProduct = (req, res) => {
   res.render("admin/edit-product", {
     pageTitle: "Add Product",
     path: "/admin/add-product",
@@ -18,33 +22,52 @@ exports.getAddProduct = (req, res, next) => {
   });
 };
 
-exports.postAddProduct = (req, res, next) => {
+exports.postAddProduct = async (req, res) => {
   const { title, imageUrl, description, price } = req.body;
-  const product = new Product(title, imageUrl, description, price);
-  product.save(() => res.redirect("/admin/products"));
-};
-
-exports.getEditProduct = (req, res, next) => {
-  const { productId } = req.params;
-  Product.findById(productId, (product) =>
-    res.render("admin/edit-product", {
-      pageTitle: "Edit Product",
-      path: "/admin/edit-product",
-      product,
-      editing: true,
-    })
-  );
-};
-
-exports.postEditProduct = (req, res, next) => {
-  const { title, imageUrl, description, price, id } = req.body;
-  const product = new Product(title, imageUrl, description, price, id);
-  product.save();
+  try {
+    await req.user.createProduct({ title, imageUrl, description, price });
+  } catch (error) {
+    console.error(error);
+  }
   res.redirect("/admin/products");
 };
 
-exports.postDeleteProduct = (req, res, next) => {
+exports.getEditProduct = async (req, res) => {
+  const { productId } = req.params;
+  let product;
+  try {
+    [product] = await req.user.getProducts({ where: { id: productId } });
+  } catch (error) {
+    console.error(error);
+  }
+  res.render("admin/edit-product", {
+    pageTitle: "Edit Product",
+    path: "/admin/edit-product",
+    product,
+    editing: true,
+  });
+};
+
+exports.postEditProduct = async (req, res) => {
+  const { title, imageUrl, description, price, id } = req.body;
+  try {
+    await Product.upsert({ id, title, imageUrl, description, price });
+  } catch (error) {
+    console.error(error);
+  }
+  res.redirect("/admin/products");
+};
+
+exports.postDeleteProduct = async (req, res) => {
   const { productId } = req.body;
-  Product.deleteById(productId);
+  try {
+    await Product.destroy({
+      where: {
+        id: productId,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+  }
   res.redirect("/admin/products");
 };
