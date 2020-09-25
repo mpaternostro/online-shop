@@ -3,7 +3,7 @@ const Product = require("../models/product");
 exports.getAdminProducts = async (req, res) => {
   let prods;
   try {
-    prods = await req.user.getProducts();
+    prods = await Product.fetchAll();
   } catch (error) {
     console.error(error);
   }
@@ -23,9 +23,11 @@ exports.getAddProduct = (req, res) => {
 };
 
 exports.postAddProduct = async (req, res) => {
-  const { title, imageUrl, description, price } = req.body;
+  const productData = Object.assign(req.body);
+  req.body.userId = req.user._id;
   try {
-    await req.user.createProduct({ title, imageUrl, description, price });
+    const product = new Product(productData);
+    await product.save();
   } catch (error) {
     console.error(error);
   }
@@ -36,7 +38,7 @@ exports.getEditProduct = async (req, res) => {
   const { productId } = req.params;
   let product;
   try {
-    [product] = await req.user.getProducts({ where: { id: productId } });
+    product = await Product.findById(productId);
   } catch (error) {
     console.error(error);
   }
@@ -49,9 +51,9 @@ exports.getEditProduct = async (req, res) => {
 };
 
 exports.postEditProduct = async (req, res) => {
-  const { title, imageUrl, description, price, id } = req.body;
   try {
-    await Product.upsert({ id, title, imageUrl, description, price });
+    const product = new Product(req.body);
+    product.save();
   } catch (error) {
     console.error(error);
   }
@@ -61,11 +63,7 @@ exports.postEditProduct = async (req, res) => {
 exports.postDeleteProduct = async (req, res) => {
   const { productId } = req.body;
   try {
-    await Product.destroy({
-      where: {
-        id: productId,
-      },
-    });
+    await Product.deleteById(productId);
   } catch (error) {
     console.error(error);
   }
