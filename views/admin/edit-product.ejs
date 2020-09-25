@@ -24,14 +24,14 @@
             <div class="form-control">
                 <label for="description">Description</label>
                 <textarea type="text" name="description" id="description" rows="5"
-                ><% if (editing) { %><%= product.title %><% } %></textarea>
+                ><% if (editing) { %><%= product.description %><% } %></textarea>
             </div>
             <div class="form-control">
                 <label for="price">Price</label>
                 <input type="number" name="price" id="price" autocomplete="off" step="0.01"
                 value="<% if (editing) { %><%= product.price %><% } %>">
             </div>
-            <% if (editing) { %><input type="hidden" name="id" value="<%= product.id %>"><% } %>
+            <% if (editing) { %><input type="hidden" name="id" value="<%= product._id %>"><% } %>
 
             <button class="btn" type="submit"
             ><% if (editing) { %>Update Product<% } else { %>Add Product<% } %></button>
