@@ -1,42 +1,65 @@
-const { ObjectId } = require("mongodb");
+const { Schema, model } = require("mongoose");
 
-const { getDb } = require("../utils/database");
+const productSchema = new Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  imageUrl: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+});
 
-class Product {
-  constructor({ title, imageUrl, description, price, id, userId }) {
-    this.title = title;
-    this.imageUrl = imageUrl;
-    this.description = description;
-    this.price = price;
-    this._id = id ? new ObjectId(id) : null;
-    this.userId = userId;
-  }
+module.exports = model("Product", productSchema);
 
-  async save() {
-    const db = getDb();
-    if (this._id) {
-      const query = { _id: this._id };
-      return db.collection("products").updateOne(query, { $set: this });
-    }
-    return db.collection("products").insertOne(this);
-  }
+// const { ObjectId } = require("mongodb");
 
-  static fetchAll() {
-    const db = getDb();
-    return db.collection("products").find().toArray();
-  }
+// const { getDb } = require("../utils/database");
 
-  static findById(productId) {
-    const db = getDb();
-    const query = { _id: new ObjectId(productId) };
-    return db.collection("products").find(query).next();
-  }
+// class Product {
+//   constructor({ title, imageUrl, description, price, id, userId }) {
+//     this.title = title;
+//     this.imageUrl = imageUrl;
+//     this.description = description;
+//     this.price = price;
+//     this._id = id ? new ObjectId(id) : null;
+//     this.userId = userId;
+//   }
 
-  static deleteById(productId) {
-    const db = getDb();
-    const query = { _id: new ObjectId(productId) };
-    return db.collection("products").deleteOne(query);
-  }
-}
+//   async save() {
+//     const db = getDb();
+//     if (this._id) {
+//       const query = { _id: this._id };
+//       return db.collection("products").updateOne(query, { $set: this });
+//     }
+//     return db.collection("products").insertOne(this);
+//   }
 
-module.exports = Product;
+//   static fetchAll() {
+//     const db = getDb();
+//     return db.collection("products").find().toArray();
+//   }
+
+//   static findById(productId) {
+//     const db = getDb();
+//     const query = { _id: new ObjectId(productId) };
+//     return db.collection("products").find(query).next();
+//   }
+
+//   static deleteById(productId) {
+//     const db = getDb();
+//     const query = { _id: new ObjectId(productId) };
+//     return db.collection("products").deleteOne(query);
+//   }
+// }
+
+// module.exports = Product;
