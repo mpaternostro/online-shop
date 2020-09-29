@@ -8,7 +8,7 @@
         "endOfLine": "auto"
       }
     ],
-    "no-underscore-dangle": ["error", { "allow": ["_id"]}]
+    "no-underscore-dangle": ["error", { "allow": ["_id", "_doc"]}]
   },
   "env": {
     "browser": true,

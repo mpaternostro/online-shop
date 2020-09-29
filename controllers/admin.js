@@ -3,7 +3,7 @@ const Product = require("../models/product");
 exports.getAdminProducts = async (req, res) => {
   let prods;
   try {
-    prods = await Product.fetchAll();
+    prods = await Product.find();
   } catch (error) {
     console.error(error);
   }
@@ -24,7 +24,7 @@ exports.getAddProduct = (req, res) => {
 
 exports.postAddProduct = async (req, res) => {
   const productData = Object.assign(req.body);
-  // req.body.userId = req.user._id;
+  productData.userId = req.user;
   try {
     const product = new Product(productData);
     await product.save();
@@ -52,8 +52,12 @@ exports.getEditProduct = async (req, res) => {
 
 exports.postEditProduct = async (req, res) => {
   try {
-    const product = new Product(req.body);
-    product.save();
+    const product = await Product.findById(req.body.id);
+    product.title = req.body.title;
+    product.imageUrl = req.body.imageUrl;
+    product.description = req.body.description;
+    product.price = req.body.price;
+    await product.save();
   } catch (error) {
     console.error(error);
   }
@@ -63,7 +67,7 @@ exports.postEditProduct = async (req, res) => {
 exports.postDeleteProduct = async (req, res) => {
   const { productId } = req.body;
   try {
-    await Product.deleteById(productId);
+    await Product.findByIdAndDelete(productId);
   } catch (error) {
     console.error(error);
   }
