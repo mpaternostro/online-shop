@@ -1,4 +1,5 @@
 const Product = require("../models/product");
+const Order = require("../models/order");
 
 /**
  * @param {import('express').Request} req
@@ -7,7 +8,7 @@ const Product = require("../models/product");
 exports.getIndex = async (req, res) => {
   let prods;
   try {
-    prods = await Product.fetchAll();
+    prods = await Product.find();
   } catch (error) {
     console.error(error);
   }
@@ -26,7 +27,7 @@ exports.getIndex = async (req, res) => {
 exports.getProducts = async (req, res) => {
   let prods;
   try {
-    prods = await Product.fetchAll();
+    prods = await Product.find();
   } catch (error) {
     console.error(error);
   }
@@ -53,7 +54,7 @@ exports.getProduct = async (req, res) => {
 
   res.render("shop/product-detail", {
     product,
-    pageTitle: product.title,
+    pageTitle: product ? product.title : "Product not found",
     path: `/products`,
   });
 };
@@ -65,7 +66,7 @@ exports.getProduct = async (req, res) => {
 exports.getOrders = async (req, res) => {
   let orders;
   try {
-    orders = await req.user.getOrders();
+    orders = await Order.find({ userId: req.user._id });
   } catch (error) {
     console.error(error);
   }
@@ -122,6 +123,22 @@ exports.postCartDeleteProduct = async (req, res) => {
  * @param {import('express').Response} res
  */
 exports.postOrder = async (req, res) => {
-  await req.user.addOrder();
+  try {
+    const products = await req.user.getCartProducts();
+    const orderProducts = products.map((product) => {
+      return {
+        product: { ...product.productId._doc },
+        qty: product.qty,
+      };
+    });
+    const order = new Order({
+      userId: req.user,
+      products: orderProducts,
+    });
+    await order.save();
+    await req.user.clearCart();
+  } catch (error) {
+    console.error(error);
+  }
   res.redirect("/orders");
 };
