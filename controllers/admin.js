@@ -11,6 +11,7 @@ exports.getAdminProducts = async (req, res) => {
     prods,
     pageTitle: "Admin Products",
     path: "/admin/products",
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -19,12 +20,13 @@ exports.getAddProduct = (req, res) => {
     pageTitle: "Add Product",
     path: "/admin/add-product",
     editing: false,
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
 exports.postAddProduct = async (req, res) => {
   const productData = Object.assign(req.body);
-  productData.userId = req.user;
+  productData.userId = req.session.user;
   try {
     const product = new Product(productData);
     await product.save();
@@ -47,6 +49,7 @@ exports.getEditProduct = async (req, res) => {
     path: "/admin/edit-product",
     product,
     editing: true,
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 

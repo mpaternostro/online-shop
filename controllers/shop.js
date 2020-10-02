@@ -17,6 +17,7 @@ exports.getIndex = async (req, res) => {
     prods,
     pageTitle: "Online Shop",
     path: "/",
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -36,6 +37,7 @@ exports.getProducts = async (req, res) => {
     prods,
     pageTitle: "Product List",
     path: "/products",
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -56,6 +58,7 @@ exports.getProduct = async (req, res) => {
     product,
     pageTitle: product ? product.title : "Product not found",
     path: `/products`,
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -66,7 +69,7 @@ exports.getProduct = async (req, res) => {
 exports.getOrders = async (req, res) => {
   let orders;
   try {
-    orders = await Order.find({ userId: req.user._id });
+    orders = await Order.find({ userId: req.session.user._id });
   } catch (error) {
     console.error(error);
   }
@@ -75,6 +78,7 @@ exports.getOrders = async (req, res) => {
     orders,
     pageTitle: "Your Orders",
     path: "/orders",
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -85,7 +89,7 @@ exports.getOrders = async (req, res) => {
 exports.getCart = async (req, res) => {
   let products;
   try {
-    products = await req.user.getCartProducts();
+    products = await req.session.user.getCartProducts();
   } catch (error) {
     console.error(error);
   }
@@ -94,6 +98,7 @@ exports.getCart = async (req, res) => {
     products,
     pageTitle: "Your Cart",
     path: "/cart",
+    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -104,7 +109,7 @@ exports.getCart = async (req, res) => {
 exports.postCart = async (req, res) => {
   const { productId } = req.body;
   const product = await Product.findById(productId);
-  await req.user.addToCart(product);
+  await req.session.user.addToCart(product);
   res.redirect("/cart");
 };
 
@@ -114,7 +119,7 @@ exports.postCart = async (req, res) => {
  */
 exports.postCartDeleteProduct = async (req, res) => {
   const { productId } = req.body;
-  await req.user.deleteCartProduct(productId);
+  await req.session.user.deleteCartProduct(productId);
   res.redirect("/cart");
 };
 
@@ -124,7 +129,7 @@ exports.postCartDeleteProduct = async (req, res) => {
  */
 exports.postOrder = async (req, res) => {
   try {
-    const products = await req.user.getCartProducts();
+    const products = await req.session.user.getCartProducts();
     const orderProducts = products.map((product) => {
       return {
         product: { ...product.productId._doc },
@@ -132,11 +137,11 @@ exports.postOrder = async (req, res) => {
       };
     });
     const order = new Order({
-      userId: req.user,
+      userId: req.session.user,
       products: orderProducts,
     });
     await order.save();
-    await req.user.clearCart();
+    await req.session.user.clearCart();
   } catch (error) {
     console.error(error);
   }

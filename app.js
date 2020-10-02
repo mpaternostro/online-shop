@@ -4,35 +4,46 @@ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const session = require("express-session");
+const MongoDBStore = require("connect-mongodb-session")(session);
 
 const getPageNotFound = require("./controllers/error");
 const User = require("./models/user");
 
 const app = express();
 const port = 3000;
+const store = new MongoDBStore({
+  uri: process.env.MONGO_DB_URI,
+  collection: "sessions",
+});
 
 app.set("view engine", "ejs");
 app.set("views", "views");
 
 const adminRoutes = require("./routes/admin");
 const shopRoutes = require("./routes/shop");
+const authRoutes = require("./routes/auth");
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false, store })
+);
 
-app.use(async (req, res, next) => {
-  let user;
-  try {
-    user = await User.findById(process.env.DB_USER);
-  } catch (error) {
-    console.error(error);
-  }
-  req.user = user;
-  next();
-});
+// app.use(async (req, res, next) => {
+//   let user;
+//   try {
+//     user = await User.findById(process.env.DB_USER);
+//   } catch (error) {
+//     console.error(error);
+//   }
+//   req.user = user;
+//   next();
+// });
 
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
+app.use(authRoutes);
 
 app.use(getPageNotFound);
 
