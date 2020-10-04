@@ -69,7 +69,7 @@ exports.getProduct = async (req, res) => {
 exports.getOrders = async (req, res) => {
   let orders;
   try {
-    orders = await Order.find({ userId: req.session.user._id });
+    orders = await Order.find({ userId: req.user._id });
   } catch (error) {
     console.error(error);
   }
@@ -89,7 +89,7 @@ exports.getOrders = async (req, res) => {
 exports.getCart = async (req, res) => {
   let products;
   try {
-    products = await req.session.user.getCartProducts();
+    products = await req.user.getCartProducts();
   } catch (error) {
     console.error(error);
   }
@@ -109,7 +109,7 @@ exports.getCart = async (req, res) => {
 exports.postCart = async (req, res) => {
   const { productId } = req.body;
   const product = await Product.findById(productId);
-  await req.session.user.addToCart(product);
+  await req.user.addToCart(product);
   res.redirect("/cart");
 };
 
@@ -119,7 +119,7 @@ exports.postCart = async (req, res) => {
  */
 exports.postCartDeleteProduct = async (req, res) => {
   const { productId } = req.body;
-  await req.session.user.deleteCartProduct(productId);
+  await req.user.deleteCartProduct(productId);
   res.redirect("/cart");
 };
 
@@ -129,19 +129,16 @@ exports.postCartDeleteProduct = async (req, res) => {
  */
 exports.postOrder = async (req, res) => {
   try {
-    const products = await req.session.user.getCartProducts();
+    const products = await req.user.getCartProducts();
     const orderProducts = products.map((product) => {
       return {
         product: { ...product.productId._doc },
         qty: product.qty,
       };
     });
-    const order = new Order({
-      userId: req.session.user,
-      products: orderProducts,
-    });
+    const order = new Order({ userId: req.user, products: orderProducts });
     await order.save();
-    await req.session.user.clearCart();
+    await req.user.clearCart();
   } catch (error) {
     console.error(error);
   }

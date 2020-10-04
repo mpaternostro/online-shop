@@ -30,16 +30,19 @@ app.use(
   session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false, store })
 );
 
-// app.use(async (req, res, next) => {
-//   let user;
-//   try {
-//     user = await User.findById(process.env.DB_USER);
-//   } catch (error) {
-//     console.error(error);
-//   }
-//   req.user = user;
-//   next();
-// });
+app.use(async (req, res, next) => {
+  if (!req.session.user) {
+    return next();
+  }
+  let user;
+  try {
+    user = await User.findById(req.session.user._id);
+  } catch (error) {
+    console.error(error);
+  }
+  req.user = user;
+  return next();
+});
 
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
