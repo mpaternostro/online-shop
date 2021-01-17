@@ -16,6 +16,18 @@ exports.getLogin = (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
+exports.getSignup = (req, res) => {
+  res.render("auth/signup", {
+    path: "/signup",
+    pageTitle: "Signup",
+    isAuthenticated: false,
+  });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
 exports.postLogin = async (req, res) => {
   try {
     req.session.user = await User.findById(process.env.DB_USER);
