@@ -53,24 +53,8 @@ app.use(getPageNotFound);
 (() => {
   return mongoose.connect(
     process.env.MONGO_DB_URI,
-    { useUnifiedTopology: true, useNewUrlParser: true },
+    { useUnifiedTopology: true, useNewUrlParser: true, useCreateIndex: true },
     async () => {
-      let user;
-      try {
-        user = await User.findOne();
-        if (!user) {
-          user = new User({
-            name: "Test",
-            email: "test@test.com",
-            cart: {
-              items: [],
-            },
-          });
-          await user.save();
-        }
-      } catch (error) {
-        console.error(error);
-      }
       app.listen(port, async () => {
         console.log(`Server listening at http://localhost:${port}`);
       });
