@@ -1,6 +1,16 @@
 const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
 
 const User = require("../models/user");
+
+const transporter = nodemailer.createTransport({
+  host: process.env.MAILTRAP_HOST,
+  port: process.env.MAILTRAP_PORT,
+  auth: {
+    user: process.env.MAILTRAP_USERNAME,
+    pass: process.env.MAILTRAP_PASSWORD,
+  },
+});
 
 /**
  * @param {import('express').Request} req
@@ -76,6 +86,16 @@ exports.postSignup = async (req, res) => {
     console.error(error);
     req.flash("error", "Could not create new account. Email address already in use.");
     res.redirect("/signup");
+  }
+  try {
+    transporter.sendMail({
+      to: email,
+      from: "no-reply@onlineshop.com",
+      subject: "Signup succeeded",
+      html: "<h1>You successfully signed up!</h1>",
+    });
+  } catch (error) {
+    console.error(error);
   }
 };
 
