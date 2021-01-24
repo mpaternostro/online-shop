@@ -17,7 +17,6 @@ exports.getIndex = async (req, res) => {
     prods,
     pageTitle: "Online Shop",
     path: "/",
-    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -37,7 +36,6 @@ exports.getProducts = async (req, res) => {
     prods,
     pageTitle: "Product List",
     path: "/products",
-    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -58,7 +56,6 @@ exports.getProduct = async (req, res) => {
     product,
     pageTitle: product ? product.title : "Product not found",
     path: `/products`,
-    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -78,7 +75,6 @@ exports.getOrders = async (req, res) => {
     orders,
     pageTitle: "Your Orders",
     path: "/orders",
-    isAuthenticated: req.session.isLoggedIn,
   });
 };
 
@@ -98,7 +94,6 @@ exports.getCart = async (req, res) => {
     products,
     pageTitle: "Your Cart",
     path: "/cart",
-    isAuthenticated: req.session.isLoggedIn,
   });
 };
 

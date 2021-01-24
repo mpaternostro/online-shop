@@ -6,8 +6,9 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
+const csrf = require("csurf");
 
-const getPageNotFound = require("./controllers/error");
+const { getPageNotFound, getForbidden } = require("./controllers/error");
 const User = require("./models/user");
 
 const app = express();
@@ -16,6 +17,7 @@ const store = new MongoDBStore({
   uri: process.env.MONGO_DB_URI,
   collection: "sessions",
 });
+const csrfProtection = csrf();
 
 app.set("view engine", "ejs");
 app.set("views", "views");
@@ -29,6 +31,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(
   session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false, store })
 );
+
+app.use(csrfProtection);
 
 app.use(async (req, res, next) => {
   if (!req.session.user) {
@@ -44,11 +48,18 @@ app.use(async (req, res, next) => {
   return next();
 });
 
+app.use((req, res, next) => {
+  app.locals.isAuthenticated = req.session.isLoggedIn;
+  app.locals.csrfToken = req.csrfToken();
+  next();
+});
+
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
 
 app.use(getPageNotFound);
+app.use(getForbidden);
 
 (() => {
   return mongoose.connect(
