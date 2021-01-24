@@ -7,9 +7,13 @@ const User = require("../models/user");
  * @param {import('express').Response} res
  */
 exports.getLogin = (req, res) => {
+  const [errorMessage] = req.flash("error");
+  const [successMessage] = req.flash("success");
   res.render("auth/login", {
     pageTitle: "Log In",
     path: "/auth/login",
+    errorMessage,
+    successMessage,
   });
 };
 
@@ -18,10 +22,11 @@ exports.getLogin = (req, res) => {
  * @param {import('express').Response} res
  */
 exports.getSignup = (req, res) => {
+  const [errorMessage] = req.flash("error");
   res.render("auth/signup", {
     path: "/signup",
     pageTitle: "Signup",
-    isAuthenticated: false,
+    errorMessage,
   });
 };
 
@@ -50,6 +55,7 @@ exports.postLogin = async (req, res) => {
       throw new Error("Email and password does not match.");
     }
   } catch (error) {
+    req.flash("error", error.message);
     res.redirect("/login");
     console.error(error);
   }
@@ -64,9 +70,11 @@ exports.postSignup = async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
     await User.create({ email, password: hashedPassword });
+    req.flash("success", "Account created successfully. Please log in.");
     res.redirect("/login");
   } catch (error) {
     console.error(error);
+    req.flash("error", "Could not create new account. Email address already in use.");
     res.redirect("/signup");
   }
 };
