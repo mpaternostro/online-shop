@@ -44,6 +44,19 @@ exports.getSignup = (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
+exports.getResetPassword = async (req, res) => {
+  const [errorMessage] = req.flash("error");
+  res.render("auth/reset-password", {
+    path: "/reset-password",
+    pageTitle: "Reset Password",
+    errorMessage,
+  });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
 exports.postLogin = async (req, res) => {
   const { email, password } = req.body;
   try {
