@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 
@@ -51,6 +53,37 @@ exports.getResetPassword = async (req, res) => {
     pageTitle: "Reset Password",
     errorMessage,
   });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+exports.getNewPassword = async (req, res) => {
+  const { token } = req.params;
+  try {
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: {
+        $gt: Date.now(),
+      },
+    });
+    if (!user) {
+      throw new Error("Reset password link has expired. Please request a new password reset.");
+    }
+    const [errorMessage] = req.flash("error");
+    res.render("auth/new-password", {
+      path: "/new-password",
+      pageTitle: "Reset Password",
+      errorMessage,
+      userId: user._id.toString(),
+      resetToken: token,
+    });
+  } catch (error) {
+    req.flash("error", error.message);
+    console.error(error);
+    res.redirect("/login");
+  }
 };
 
 /**
@@ -123,4 +156,88 @@ exports.postLogout = async (req, res) => {
     }
     res.redirect("/");
   });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+exports.postResetPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error(
+        "There's no account linked with email entered. Please verify email and try again."
+      );
+    }
+    crypto.randomBytes(32, async (err, buffer) => {
+      if (err) {
+        throw new Error("Could not generate token. Please try again later.");
+      }
+      const ONE_HOUR_IN_MILLISECONDS = 3600000;
+      const resetToken = buffer.toString("hex");
+      user.resetToken = resetToken;
+      user.resetTokenExpiration = Date.now() + ONE_HOUR_IN_MILLISECONDS;
+      await user.save();
+
+      transporter
+        .sendMail({
+          to: email,
+          from: "no-reply@onlineshop.com",
+          subject: "Password reset",
+          html: `
+            <p>To reset your password, click the link below or copy and paste the link into your browser location bar:</p>
+            <p><a href="localhost:3000/reset-password/${resetToken}">localhost:3000/reset-password/${resetToken}</a></p>
+            <p>This link will remain active for an hour.</p>
+          `,
+        })
+        .then(() => {
+          req.flash("success", "An email with instructions to reset your password has been sent.");
+          res.redirect("/login");
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    });
+  } catch (err) {
+    console.error(err);
+    req.flash("error", err.message);
+    res.redirect("/reset-password");
+  }
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+exports.postNewPassword = async (req, res) => {
+  const { userId, resetToken, password } = req.body;
+  try {
+    const user = await User.findOne({
+      _id: userId,
+      resetToken,
+      resetTokenExpiration: {
+        $gt: Date.now(),
+      },
+    });
+    if (!user) {
+      throw new Error("Reset password link has expired. Please request a new password reset.");
+    }
+    const hashedPassword = await bcrypt.hash(password, 12);
+    if (!hashedPassword) {
+      throw new Error("Could not update password. Please try again later.");
+    }
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+    await user.save();
+
+    req.flash("success", "Password has been updated. You can now log in with the new password.");
+    res.redirect("/login");
+  } catch (error) {
+    console.error(error);
+    req.flash("error", error.message);
+    res.redirect("/login");
+  }
 };
