@@ -6,8 +6,10 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
+const csrf = require("csurf");
+const flash = require("connect-flash");
 
-const getPageNotFound = require("./controllers/error");
+const { getPageNotFound, getForbidden } = require("./controllers/error");
 const User = require("./models/user");
 
 const app = express();
@@ -16,6 +18,7 @@ const store = new MongoDBStore({
   uri: process.env.MONGO_DB_URI,
   collection: "sessions",
 });
+const csrfProtection = csrf();
 
 app.set("view engine", "ejs");
 app.set("views", "views");
@@ -29,6 +32,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(
   session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false, store })
 );
+
+app.use(csrfProtection);
+app.use(flash());
 
 app.use(async (req, res, next) => {
   if (!req.session.user) {
@@ -44,33 +50,24 @@ app.use(async (req, res, next) => {
   return next();
 });
 
+app.use((req, res, next) => {
+  app.locals.isAuthenticated = req.session.isLoggedIn;
+  app.locals.csrfToken = req.csrfToken();
+  next();
+});
+
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
 
 app.use(getPageNotFound);
+app.use(getForbidden);
 
 (() => {
   return mongoose.connect(
     process.env.MONGO_DB_URI,
-    { useUnifiedTopology: true, useNewUrlParser: true },
+    { useUnifiedTopology: true, useNewUrlParser: true, useCreateIndex: true },
     async () => {
-      let user;
-      try {
-        user = await User.findOne();
-        if (!user) {
-          user = new User({
-            name: "Test",
-            email: "test@test.com",
-            cart: {
-              items: [],
-            },
-          });
-          await user.save();
-        }
-      } catch (error) {
-        console.error(error);
-      }
       app.listen(port, async () => {
         console.log(`Server listening at http://localhost:${port}`);
       });
