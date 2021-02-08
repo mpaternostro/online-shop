@@ -11,6 +11,7 @@ const {
   postResetPassword,
   postNewPassword,
 } = require("../controllers/auth");
+const signupValidator = require("../validators/signup");
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.get("/reset-password/:token", getNewPassword);
 
 router.post("/login", postLogin);
 
-router.post("/signup", postSignup);
+router.post("/signup", signupValidator, postSignup);
 
 router.post("/logout", postLogout);
 

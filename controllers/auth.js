@@ -2,6 +2,7 @@ const crypto = require("crypto");
 
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
+const { validationResult } = require("express-validator");
 
 const User = require("../models/user");
 
@@ -122,7 +123,16 @@ exports.postLogin = async (req, res) => {
  * @param {import('express').Response} res
  */
 exports.postSignup = async (req, res) => {
-  const { email, password, confirmPassword } = req.body;
+  const { email, password } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const [{ msg: errorMessage }] = errors.array();
+    return res.status(422).render("auth/signup", {
+      path: "/signup",
+      pageTitle: "Signup",
+      errorMessage,
+    });
+  }
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
     await User.create({ email, password: hashedPassword });
@@ -130,18 +140,18 @@ exports.postSignup = async (req, res) => {
     res.redirect("/login");
   } catch (error) {
     console.error(error);
-    req.flash("error", "Could not create new account. Email address already in use.");
+    req.flash("error", "Could not create new account. Please try again later.");
     res.redirect("/signup");
   }
   try {
-    transporter.sendMail({
+    return transporter.sendMail({
       to: email,
       from: "no-reply@onlineshop.com",
       subject: "Signup succeeded",
       html: "<h1>You successfully signed up!</h1>",
     });
   } catch (error) {
-    console.error(error);
+    return console.error(error);
   }
 };
 
