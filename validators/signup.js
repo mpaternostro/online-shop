@@ -1,4 +1,5 @@
 const { body } = require("express-validator");
+const { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } = require("../constants");
 
 const User = require("../models/user");
 
@@ -13,18 +14,17 @@ module.exports = [
             new Error("Could not create new account. Email address already in use.")
           );
         }
-        return true;
+        return Promise.resolve();
       });
     }),
   body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must have more than 6 characters.")
-    .isLength({ max: 20 })
-    .withMessage("Password must have less than 20 characters."),
+    .isLength({ min: PASSWORD_MIN_LENGTH })
+    .withMessage(`Password must have more than ${PASSWORD_MIN_LENGTH} characters.`)
+    .isLength({ max: PASSWORD_MAX_LENGTH })
+    .withMessage(`Password must have less than ${PASSWORD_MAX_LENGTH} characters.`),
   body("confirmPassword").custom((value, { req }) => {
     if (value !== req.body.password) {
       throw new Error("Passwords did not match.");
     }
-    return true;
   }),
 ];

@@ -92,6 +92,14 @@ exports.getNewPassword = async (req, res) => {
  * @param {import('express').Response} res
  */
 exports.postLogin = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const [{ msg: errorMsg }] = errors.array();
+    req.flash("error", errorMsg);
+    res.redirect("/login");
+    return false;
+  }
+
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -116,6 +124,7 @@ exports.postLogin = async (req, res) => {
     res.redirect("/login");
     console.error(error);
   }
+  return true;
 };
 
 /**
