@@ -6,5 +6,6 @@ module.exports = [
     .isLength({ min: PASSWORD_MIN_LENGTH })
     .withMessage(`Password must have more than ${PASSWORD_MIN_LENGTH} characters.`)
     .isLength({ max: PASSWORD_MAX_LENGTH })
-    .withMessage(`Password must have less than ${PASSWORD_MAX_LENGTH} characters.`),
+    .withMessage(`Password must have less than ${PASSWORD_MAX_LENGTH} characters.`)
+    .trim(),
 ];

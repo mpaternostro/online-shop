@@ -16,7 +16,8 @@ module.exports = [
         }
         return Promise.resolve();
       });
-    }),
+    })
+    .normalizeEmail(),
   body("password")
     .isLength({ min: PASSWORD_MIN_LENGTH })
     .withMessage(`Password must have more than ${PASSWORD_MIN_LENGTH} characters.`)
@@ -26,5 +27,6 @@ module.exports = [
     if (value !== req.body.password) {
       throw new Error("Passwords did not match.");
     }
+    return true;
   }),
 ];
