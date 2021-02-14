@@ -18,11 +18,25 @@
         
         <div class="form-control">
           <label for="email">Email</label>
-          <input type="email" name="email" id="email">
+          <input
+            class="<%= errors.includes('email') ? 'invalid' : '' %>"
+            type="email"
+            name="email"
+            id="email"
+            value="<%= originalInput.email %>"
+            required
+          >
         </div>
         <div class="form-control">
           <label for="password">Password</label>
-          <input type="password" name="password" id="password" required>
+          <input
+            class="<%= errors.includes('password') ? 'invalid' : '' %>"
+            type="password"
+            name="password"
+            id="password"
+            value="<%= originalInput.password %>"
+            required
+          >
         </div>
         
         <button class="btn" type="submit">Log In</button>
