@@ -40,6 +40,12 @@ exports.getSignup = (req, res) => {
     path: "/signup",
     pageTitle: "Signup",
     errorMessage,
+    originalInput: {
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+    errors: [],
   });
 };
 
@@ -135,11 +141,14 @@ exports.postSignup = async (req, res) => {
   const { email, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const [{ msg: errorMessage }] = errors.array();
+    const errorsArr = errors.array();
+    const [{ msg: errorMessage }] = errorsArr;
     return res.status(422).render("auth/signup", {
       path: "/signup",
       pageTitle: "Signup",
       errorMessage,
+      originalInput: req.body,
+      errors: errorsArr.map(({ param }) => param),
     });
   }
   try {
