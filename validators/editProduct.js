@@ -9,7 +9,7 @@ const MAX_PRICE = 1000;
 
 module.exports = [
   body("title")
-    .isString()
+    .notEmpty()
     .withMessage("Please enter a title.")
     .bail()
     .isLength({ min: TITLE_MIN_LENGTH })
