@@ -2,6 +2,7 @@ const crypto = require("crypto");
 
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
+const { validationResult } = require("express-validator");
 
 const User = require("../models/user");
 
@@ -19,13 +20,17 @@ const transporter = nodemailer.createTransport({
  * @param {import('express').Response} res
  */
 exports.getLogin = (req, res) => {
-  const [errorMessage] = req.flash("error");
   const [successMessage] = req.flash("success");
   res.render("auth/login", {
     pageTitle: "Log In",
     path: "/auth/login",
-    errorMessage,
+    errorMessage: "",
     successMessage,
+    originalInput: {
+      email: "",
+      password: "",
+    },
+    errors: [],
   });
 };
 
@@ -34,11 +39,16 @@ exports.getLogin = (req, res) => {
  * @param {import('express').Response} res
  */
 exports.getSignup = (req, res) => {
-  const [errorMessage] = req.flash("error");
   res.render("auth/signup", {
     path: "/signup",
     pageTitle: "Signup",
-    errorMessage,
+    errorMessage: "",
+    originalInput: {
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+    errors: [],
   });
 };
 
@@ -47,11 +57,14 @@ exports.getSignup = (req, res) => {
  * @param {import('express').Response} res
  */
 exports.getResetPassword = async (req, res) => {
-  const [errorMessage] = req.flash("error");
   res.render("auth/reset-password", {
     path: "/reset-password",
     pageTitle: "Reset Password",
-    errorMessage,
+    errorMessage: "",
+    originalInput: {
+      email: "",
+    },
+    errors: [],
   });
 };
 
@@ -71,13 +84,16 @@ exports.getNewPassword = async (req, res) => {
     if (!user) {
       throw new Error("Reset password link has expired. Please request a new password reset.");
     }
-    const [errorMessage] = req.flash("error");
     res.render("auth/new-password", {
       path: "/new-password",
       pageTitle: "Reset Password",
-      errorMessage,
+      errorMessage: "",
       userId: user._id.toString(),
       resetToken: token,
+      originalInput: {
+        password: "",
+      },
+      errors: [],
     });
   } catch (error) {
     req.flash("error", error.message);
@@ -92,9 +108,29 @@ exports.getNewPassword = async (req, res) => {
  */
 exports.postLogin = async (req, res) => {
   const { email, password } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorsArr = errors.array();
+    const [{ msg: errorMsg }] = errorsArr;
+    res.status(422).render("auth/login", {
+      pageTitle: "Log In",
+      path: "/auth/login",
+      successMessage: "",
+      errorMessage: errorMsg,
+      originalInput: {
+        email,
+        password,
+      },
+      errors: errorsArr.map(({ param }) => param),
+    });
+    return false;
+  }
+
+  const loginErrors = [];
   try {
     const user = await User.findOne({ email });
     if (!user) {
+      loginErrors.push("email");
       throw new Error("There's no user registered with this email.");
     }
     const doMatchPassword = await bcrypt.compare(password, user.password);
@@ -108,13 +144,24 @@ exports.postLogin = async (req, res) => {
         res.redirect("/");
       });
     } else {
+      loginErrors.push("password");
       throw new Error("Email and password does not match.");
     }
   } catch (error) {
-    req.flash("error", error.message);
-    res.redirect("/login");
+    res.status(422).render("auth/login", {
+      pageTitle: "Log In",
+      path: "/auth/login",
+      successMessage: "",
+      errorMessage: error.message,
+      originalInput: {
+        email,
+        password,
+      },
+      errors: loginErrors,
+    });
     console.error(error);
   }
+  return true;
 };
 
 /**
@@ -122,7 +169,19 @@ exports.postLogin = async (req, res) => {
  * @param {import('express').Response} res
  */
 exports.postSignup = async (req, res) => {
-  const { email, password, confirmPassword } = req.body;
+  const { email, password } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorsArr = errors.array();
+    const [{ msg: errorMessage }] = errorsArr;
+    return res.status(422).render("auth/signup", {
+      path: "/signup",
+      pageTitle: "Signup",
+      errorMessage,
+      originalInput: req.body,
+      errors: errorsArr.map(({ param }) => param),
+    });
+  }
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
     await User.create({ email, password: hashedPassword });
@@ -130,18 +189,18 @@ exports.postSignup = async (req, res) => {
     res.redirect("/login");
   } catch (error) {
     console.error(error);
-    req.flash("error", "Could not create new account. Email address already in use.");
+    req.flash("error", "Could not create new account. Please try again later.");
     res.redirect("/signup");
   }
   try {
-    transporter.sendMail({
+    return transporter.sendMail({
       to: email,
       from: "no-reply@onlineshop.com",
       subject: "Signup succeeded",
       html: "<h1>You successfully signed up!</h1>",
     });
   } catch (error) {
-    console.error(error);
+    return console.error(error);
   }
 };
 
@@ -164,6 +223,21 @@ exports.postLogout = async (req, res) => {
  */
 exports.postResetPassword = async (req, res) => {
   const { email } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorsArr = errors.array();
+    const [{ msg: errorMsg }] = errorsArr;
+    res.status(422).render("auth/reset-password", {
+      path: "/reset-password",
+      pageTitle: "Reset Password",
+      errorMessage: errorMsg,
+      originalInput: {
+        email,
+      },
+      errors: ["email"],
+    });
+    return false;
+  }
   try {
     const user = await User.findOne({ email });
     if (!user) {
@@ -202,9 +276,17 @@ exports.postResetPassword = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    req.flash("error", err.message);
-    res.redirect("/reset-password");
+    res.status(422).render("auth/reset-password", {
+      path: "/reset-password",
+      pageTitle: "Reset Password",
+      errorMessage: err.message,
+      originalInput: {
+        email,
+      },
+      errors: ["email"],
+    });
   }
+  return true;
 };
 
 /**
@@ -213,6 +295,24 @@ exports.postResetPassword = async (req, res) => {
  */
 exports.postNewPassword = async (req, res) => {
   const { userId, resetToken, password } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorsArr = errors.array();
+    const [{ msg: errorMsg }] = errorsArr;
+    res.status(422).render("auth/new-password", {
+      path: "/new-password",
+      pageTitle: "Reset Password",
+      errorMessage: errorMsg,
+      userId,
+      resetToken,
+      originalInput: {
+        password,
+      },
+      errors: ["password"],
+    });
+    return false;
+  }
+
   try {
     const user = await User.findOne({
       _id: userId,
@@ -240,4 +340,5 @@ exports.postNewPassword = async (req, res) => {
     req.flash("error", error.message);
     res.redirect("/login");
   }
+  return true;
 };

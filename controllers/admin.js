@@ -1,3 +1,5 @@
+const { validationResult } = require("express-validator");
+
 const Product = require("../models/product");
 
 exports.getAdminProducts = async (req, res) => {
@@ -19,11 +21,32 @@ exports.getAddProduct = (req, res) => {
     pageTitle: "Add Product",
     path: "/admin/add-product",
     editing: false,
+    product: {
+      title: "",
+      imageUrl: "",
+      description: "",
+      price: "",
+    },
+    errorMessages: [],
+    errors: [],
   });
 };
 
 exports.postAddProduct = async (req, res) => {
   const productData = Object.assign(req.body);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorsArr = errors.array();
+    res.status(422).render("admin/edit-product", {
+      pageTitle: "Add Product",
+      path: "/admin/add-product",
+      editing: false,
+      product: productData,
+      errorMessages: errorsArr.map(({ msg }) => msg),
+      errors: errorsArr.map(({ param }) => param),
+    });
+    return false;
+  }
   productData.userId = req.user;
   try {
     const product = new Product(productData);
@@ -32,6 +55,7 @@ exports.postAddProduct = async (req, res) => {
     console.error(error);
   }
   res.redirect("/admin/products");
+  return true;
 };
 
 exports.getEditProduct = async (req, res) => {
@@ -45,8 +69,10 @@ exports.getEditProduct = async (req, res) => {
     res.render("admin/edit-product", {
       pageTitle: "Edit Product",
       path: "/admin/edit-product",
-      product,
       editing: true,
+      product,
+      errorMessages: [],
+      errors: [],
     });
   } catch (error) {
     console.error(error);
@@ -55,6 +81,19 @@ exports.getEditProduct = async (req, res) => {
 };
 
 exports.postEditProduct = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorsArr = errors.array();
+    res.status(422).render("admin/edit-product", {
+      pageTitle: "Edit Product",
+      path: `/admin/edit-product/${req.body.id}`,
+      editing: true,
+      errorMessages: errorsArr.map(({ msg }) => msg),
+      product: { ...req.body, _id: req.body.id },
+      errors: errorsArr.map(({ param }) => param),
+    });
+    return false;
+  }
   try {
     const product = await Product.findOne({ _id: req.body.id, userId: req.user._id });
     if (!product) {
@@ -70,6 +109,7 @@ exports.postEditProduct = async (req, res) => {
     console.error(error);
     res.redirect("/");
   }
+  return true;
 };
 
 exports.postDeleteProduct = async (req, res) => {
