@@ -14,7 +14,7 @@ const productSchema = new Schema({
     required: true,
   },
   price: {
-    type: Number,
+    type: Schema.Types.Decimal128,
     required: true,
   },
   userId: {
