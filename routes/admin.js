@@ -9,6 +9,7 @@ const {
   postDeleteProduct,
 } = require("../controllers/admin");
 const isAuth = require("../middlewares/is-auth");
+const editProduct = require("../validators/editProduct");
 
 const router = express.Router();
 
@@ -19,13 +20,13 @@ router.get("/products", isAuth, getAdminProducts);
 router.get("/add-product", isAuth, getAddProduct);
 
 // /admin/add-product => POST
-router.post("/add-product", isAuth, postAddProduct);
+router.post("/add-product", isAuth, editProduct, postAddProduct);
 
 // /admin/edit-product/12345 => GET
 router.get("/edit-product/:productId", isAuth, getEditProduct);
 
 // /admin/edit-product/12345 => POST
-router.post("/edit-product", isAuth, postEditProduct);
+router.post("/edit-product/:productId", isAuth, editProduct, postEditProduct);
 
 // /admin/delete-product/12345 => POST
 router.post("/delete-product", isAuth, postDeleteProduct);
