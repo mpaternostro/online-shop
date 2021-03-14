@@ -23,7 +23,7 @@ module.exports = [
     .withMessage("Please enter a description.")
     .bail()
     .isLength({ min: DESCRIPTION_MIN_LENGTH })
-    .withMessage(`Description must have less than ${DESCRIPTION_MIN_LENGTH} characters.`)
+    .withMessage(`Description must have more than ${DESCRIPTION_MIN_LENGTH} characters.`)
     .isLength({ max: DESCRIPTION_MAX_LENGTH })
     .withMessage(`Description must have less than ${DESCRIPTION_MAX_LENGTH} characters.`)
     .trim(),

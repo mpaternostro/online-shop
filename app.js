@@ -9,7 +9,7 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const csrf = require("csurf");
 const flash = require("connect-flash");
 
-const { getPageNotFound, getForbidden } = require("./controllers/error");
+const { getPageNotFound, getForbidden, getInternalServerError } = require("./controllers/error");
 const User = require("./models/user");
 
 const app = express();
@@ -43,8 +43,11 @@ app.use(async (req, res, next) => {
   let user;
   try {
     user = await User.findById(req.session.user._id);
+    if (!user) {
+      return next();
+    }
   } catch (error) {
-    console.error(error);
+    throw new Error();
   }
   req.user = user;
   return next();
@@ -60,8 +63,9 @@ app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
 
-app.use(getPageNotFound);
+app.get("/500", getInternalServerError);
 app.use(getForbidden);
+app.use(getPageNotFound);
 
 (() => {
   return mongoose.connect(

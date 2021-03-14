@@ -52,7 +52,7 @@ exports.postAddProduct = async (req, res) => {
     const product = new Product(productData);
     await product.save();
   } catch (error) {
-    console.error(error);
+    return res.redirect("/500");
   }
   res.redirect("/admin/products");
   return true;
