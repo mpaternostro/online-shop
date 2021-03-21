@@ -1,15 +1,16 @@
 const { validationResult } = require("express-validator");
+const ServerError = require("../error/server-error");
 
 const Product = require("../models/product");
 
-exports.getAdminProducts = async (req, res) => {
+exports.getAdminProducts = async (req, res, next) => {
   let prods;
   try {
     prods = await Product.find({ userId: req.user._id });
   } catch (error) {
-    console.error(error);
+    return next(new ServerError(error));
   }
-  res.render("admin/products", {
+  return res.render("admin/products", {
     prods,
     pageTitle: "Admin Products",
     path: "/admin/products",
@@ -32,7 +33,7 @@ exports.getAddProduct = (req, res) => {
   });
 };
 
-exports.postAddProduct = async (req, res) => {
+exports.postAddProduct = async (req, res, next) => {
   const productData = Object.assign(req.body);
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -52,32 +53,48 @@ exports.postAddProduct = async (req, res) => {
     const product = new Product(productData);
     await product.save();
   } catch (error) {
-    console.error(error);
+    return next(new ServerError(error));
   }
   res.redirect("/admin/products");
   return true;
 };
 
-exports.getEditProduct = async (req, res) => {
+exports.getEditProduct = async (req, res, next) => {
   const { productId } = req.params;
   let product;
   try {
+    if (productId.length !== 24) {
+      const error = new Error(
+        "Product does not exists or user has no editing access to this resource."
+      );
+      error.code = "PRODUCTNOTFOUND";
+      throw error;
+    }
     product = await Product.findOne({ _id: productId, userId: req.user._id });
     if (!product) {
-      throw new Error("Product does not exists or user has no editing access to this resource.");
+      const error = new Error(
+        "Product does not exists or user has no editing access to this resource."
+      );
+      error.code = "PRODUCTNOTFOUND";
+      throw error;
     }
-    res.render("admin/edit-product", {
-      pageTitle: "Edit Product",
-      path: "/admin/edit-product",
-      editing: true,
-      product,
-      errorMessages: [],
-      errors: [],
-    });
   } catch (error) {
-    console.error(error);
-    res.redirect("/");
+    if (error.code !== "PRODUCTNOTFOUND") {
+      return next(new ServerError(error));
+    }
   }
+
+  if (!product) {
+    res.status(404);
+  }
+  return res.render("admin/edit-product", {
+    pageTitle: product ? "Edit Product" : "Product not found",
+    path: "/admin/edit-product",
+    editing: true,
+    product,
+    errorMessages: [],
+    errors: [],
+  });
 };
 
 exports.postEditProduct = async (req, res) => {
@@ -97,7 +114,11 @@ exports.postEditProduct = async (req, res) => {
   try {
     const product = await Product.findOne({ _id: req.body.id, userId: req.user._id });
     if (!product) {
-      throw new Error("Could not update the requested product");
+      const error = new Error(
+        "Product does not exists or user has no editing access to this resource."
+      );
+      error.code = "PRODUCTNOTFOUND";
+      throw error;
     }
     product.title = req.body.title;
     product.imageUrl = req.body.imageUrl;
@@ -106,8 +127,17 @@ exports.postEditProduct = async (req, res) => {
     await product.save();
     res.redirect("/admin/products");
   } catch (error) {
-    console.error(error);
-    res.redirect("/");
+    if (error.code === "PRODUCTNOTFOUND") {
+      return res.redirect("/admin/products");
+    }
+    res.status(422).render("admin/edit-product", {
+      pageTitle: "Edit Product",
+      path: `/admin/edit-product/${req.body.id}`,
+      editing: true,
+      errorMessages: ["Internal Server Error"],
+      product: { ...req.body, _id: req.body.id },
+      errors: [],
+    });
   }
   return true;
 };
@@ -121,7 +151,6 @@ exports.postDeleteProduct = async (req, res) => {
     }
     res.redirect("/admin/products");
   } catch (error) {
-    console.error(error);
     res.redirect("/");
   }
 };

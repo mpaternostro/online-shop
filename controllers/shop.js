@@ -1,19 +1,20 @@
 const Product = require("../models/product");
 const Order = require("../models/order");
+const ServerError = require("../error/server-error");
 
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.getIndex = async (req, res) => {
+exports.getIndex = async (req, res, next) => {
   let prods;
   try {
     prods = await Product.find();
   } catch (error) {
-    console.error(error);
+    return next(new ServerError(error));
   }
 
-  res.render("shop/index", {
+  return res.render("shop/index", {
     prods,
     pageTitle: "Online Shop",
     path: "/",
@@ -24,15 +25,15 @@ exports.getIndex = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.getProducts = async (req, res) => {
+exports.getProducts = async (req, res, next) => {
   let prods;
   try {
     prods = await Product.find();
   } catch (error) {
-    console.error(error);
+    return next(new ServerError(error));
   }
 
-  res.render("shop/product-list", {
+  return res.render("shop/product-list", {
     prods,
     pageTitle: "Product List",
     path: "/products",
@@ -43,16 +44,28 @@ exports.getProducts = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.getProduct = async (req, res) => {
+exports.getProduct = async (req, res, next) => {
   const { productId } = req.params;
   let product;
   try {
+    if (productId.length !== 24) {
+      const error = new Error(
+        "Product does not exists or user has no editing access to this resource."
+      );
+      error.code = "PRODUCTNOTFOUND";
+      throw error;
+    }
     product = await Product.findById(productId);
   } catch (error) {
-    console.error(error);
+    if (error.code !== "PRODUCTNOTFOUND") {
+      return next(new ServerError(error));
+    }
   }
 
-  res.render("shop/product-detail", {
+  if (!product) {
+    res.status(404);
+  }
+  return res.render("shop/product-detail", {
     product,
     pageTitle: product ? product.title : "Product not found",
     path: `/products`,
@@ -63,15 +76,15 @@ exports.getProduct = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.getOrders = async (req, res) => {
+exports.getOrders = async (req, res, next) => {
   let orders;
   try {
     orders = await Order.find({ userId: req.user._id });
   } catch (error) {
-    console.error(error);
+    return next(new ServerError(error));
   }
 
-  res.render("shop/orders", {
+  return res.render("shop/orders", {
     orders,
     pageTitle: "Your Orders",
     path: "/orders",
@@ -82,15 +95,15 @@ exports.getOrders = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.getCart = async (req, res) => {
+exports.getCart = async (req, res, next) => {
   let products;
   try {
     products = await req.user.getCartProducts();
   } catch (error) {
-    console.error(error);
+    return next(new ServerError(error));
   }
 
-  res.render("shop/cart", {
+  return res.render("shop/cart", {
     products,
     pageTitle: "Your Cart",
     path: "/cart",
@@ -101,28 +114,36 @@ exports.getCart = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postCart = async (req, res) => {
+exports.postCart = async (req, res, next) => {
   const { productId } = req.body;
-  const product = await Product.findById(productId);
-  await req.user.addToCart(product);
-  res.redirect("/cart");
+  try {
+    const product = await Product.findById(productId);
+    await req.user.addToCart(product);
+  } catch (error) {
+    return next(new ServerError(error));
+  }
+  return res.redirect("/cart");
 };
 
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postCartDeleteProduct = async (req, res) => {
+exports.postCartDeleteProduct = async (req, res, next) => {
   const { productId } = req.body;
-  await req.user.deleteCartProduct(productId);
-  res.redirect("/cart");
+  try {
+    await req.user.deleteCartProduct(productId);
+  } catch (error) {
+    return next(new ServerError(error));
+  }
+  return res.redirect("/cart");
 };
 
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postOrder = async (req, res) => {
+exports.postOrder = async (req, res, next) => {
   try {
     const products = await req.user.getCartProducts();
     const orderProducts = products.map((product) => {
@@ -135,7 +156,7 @@ exports.postOrder = async (req, res) => {
     await order.save();
     await req.user.clearCart();
   } catch (error) {
-    console.error(error);
+    return next(new ServerError(error));
   }
-  res.redirect("/orders");
+  return res.redirect("/orders");
 };
