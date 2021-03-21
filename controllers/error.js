@@ -3,7 +3,7 @@
  * @param {import('express').Response} res
  */
 
-exports.getPageNotFound = (req, res) => {
+exports.handlePageNotFound = (req, res) => {
   return res.status(404).render("errors/404", {
     pageTitle: "Page Not Found",
     path: "/404",
@@ -16,7 +16,10 @@ exports.getPageNotFound = (req, res) => {
  * @param {import('express').NextFunction} next
  */
 
-exports.getForbidden = (err, req, res, next) => {
+exports.handleForbiddenError = (err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
   if (err.code !== "EBADCSRFTOKEN") return next(err);
   return res.status(403).render("errors/403", {
     pageTitle: "Forbidden",
@@ -29,7 +32,12 @@ exports.getForbidden = (err, req, res, next) => {
  * @param {import('express').Response} res
  */
 
-exports.getInternalServerError = (req, res) => {
+exports.handleServerError = (err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+  if (err.code !== 500) return next(err);
+  console.log({ err });
   return res.status(500).render("errors/500", {
     pageTitle: "Internal Server Error",
     path: "/500",

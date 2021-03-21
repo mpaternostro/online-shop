@@ -9,7 +9,11 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const csrf = require("csurf");
 const flash = require("connect-flash");
 
-const { getPageNotFound, getForbidden, getInternalServerError } = require("./controllers/error");
+const {
+  handlePageNotFound,
+  handleForbiddenError,
+  handleServerError,
+} = require("./controllers/error");
 const User = require("./models/user");
 
 const app = express();
@@ -63,9 +67,9 @@ app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
 
-app.get("/500", getInternalServerError);
-app.use(getForbidden);
-app.use(getPageNotFound);
+app.use(handleForbiddenError);
+app.use(handleServerError);
+app.use(handlePageNotFound);
 
 (() => {
   return mongoose.connect(
