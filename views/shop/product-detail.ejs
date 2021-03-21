@@ -4,8 +4,8 @@
 <body>
 <%- include('../includes/navigation.ejs') %>
 
-  <main class="centered">
-    <% if(product) { %>
+  <% if (product) { %>
+    <main class="centered">
       <h1><%= product.title %></h1>
       <div class="image">
         <img src="<%= product.imageUrl %>" alt="<%= product.title %>">
@@ -15,8 +15,10 @@
       <% if (isAuthenticated) { %> 
         <%- include('../includes/add-to-cart.ejs') %>
       <% } %>
-    <% } else { %>
+    </main>
+  <% } else { %>
+    <main>
       <h1>Product not found</h1>
-    <% } %>
-  </main>
+    </main>
+  <% } %>
 <%- include('../includes/end.ejs') %>

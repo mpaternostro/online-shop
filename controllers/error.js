@@ -37,7 +37,6 @@ exports.handleServerError = (err, req, res, next) => {
     return next(err);
   }
   if (err.code !== 500) return next(err);
-  console.log({ err });
   return res.status(500).render("errors/500", {
     pageTitle: "Internal Server Error",
     path: "/500",

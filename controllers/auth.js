@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const { validationResult } = require("express-validator");
 
 const User = require("../models/user");
+const ServerError = require("../error/server-error");
 
 const transporter = nodemailer.createTransport({
   host: process.env.MAILTRAP_HOST,
@@ -72,7 +73,7 @@ exports.getResetPassword = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.getNewPassword = async (req, res) => {
+exports.getNewPassword = async (req, res, next) => {
   const { token } = req.params;
   try {
     const user = await User.findOne({
@@ -82,9 +83,13 @@ exports.getNewPassword = async (req, res) => {
       },
     });
     if (!user) {
-      throw new Error("Reset password link has expired. Please request a new password reset.");
+      const error = new Error(
+        "Reset password link has expired. Please request a new password reset."
+      );
+      error.code = "EXPIREDLINK";
+      throw error;
     }
-    res.render("auth/new-password", {
+    return res.render("auth/new-password", {
       path: "/new-password",
       pageTitle: "Reset Password",
       errorMessage: "",
@@ -96,9 +101,11 @@ exports.getNewPassword = async (req, res) => {
       errors: [],
     });
   } catch (error) {
-    req.flash("error", error.message);
-    console.error(error);
-    res.redirect("/login");
+    if (error.code === "EXPIREDLINK") {
+      req.flash("error", error.message);
+      res.redirect("/login");
+    }
+    return next(new ServerError(error));
   }
 };
 
@@ -106,7 +113,7 @@ exports.getNewPassword = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postLogin = async (req, res) => {
+exports.postLogin = async (req, res, next) => {
   const { email, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -131,7 +138,9 @@ exports.postLogin = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       loginErrors.push("email");
-      throw new Error("There's no user registered with this email.");
+      const error = new Error("There's no user registered with this email.");
+      error.code = "USERNOTFOUND";
+      throw error;
     }
     const doMatchPassword = await bcrypt.compare(password, user.password);
     if (doMatchPassword) {
@@ -145,21 +154,25 @@ exports.postLogin = async (req, res) => {
       });
     } else {
       loginErrors.push("password");
-      throw new Error("Email and password does not match.");
+      const error = new Error("Email and password does not match.");
+      error.code = "PASSWORDDIDNOTMATCH";
+      throw error;
     }
   } catch (error) {
-    res.status(422).render("auth/login", {
-      pageTitle: "Log In",
-      path: "/auth/login",
-      successMessage: "",
-      errorMessage: error.message,
-      originalInput: {
-        email,
-        password,
-      },
-      errors: loginErrors,
-    });
-    console.error(error);
+    if (error.code === "USERNOTFOUND" || error.code === "PASSWORDDIDNOTMATCH") {
+      res.status(422).render("auth/login", {
+        pageTitle: "Log In",
+        path: "/auth/login",
+        successMessage: "",
+        errorMessage: error.message,
+        originalInput: {
+          email,
+          password,
+        },
+        errors: loginErrors,
+      });
+    }
+    return next(new ServerError(error));
   }
   return true;
 };
@@ -168,7 +181,7 @@ exports.postLogin = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postSignup = async (req, res) => {
+exports.postSignup = async (req, res, next) => {
   const { email, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -188,9 +201,7 @@ exports.postSignup = async (req, res) => {
     req.flash("success", "Account created successfully. Please log in.");
     res.redirect("/login");
   } catch (error) {
-    console.error(error);
-    req.flash("error", "Could not create new account. Please try again later.");
-    res.redirect("/signup");
+    return next(new ServerError(error));
   }
   try {
     return transporter.sendMail({
@@ -221,7 +232,7 @@ exports.postLogout = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postResetPassword = async (req, res) => {
+exports.postResetPassword = async (req, res, next) => {
   const { email } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -241,9 +252,11 @@ exports.postResetPassword = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      throw new Error(
+      const error = new Error(
         "There's no account linked with email entered. Please verify email and try again."
       );
+      error.code = "INVALIDEMAIL";
+      throw error;
     }
     crypto.randomBytes(32, async (err, buffer) => {
       if (err) {
@@ -275,16 +288,18 @@ exports.postResetPassword = async (req, res) => {
         });
     });
   } catch (err) {
-    console.error(err);
-    res.status(422).render("auth/reset-password", {
-      path: "/reset-password",
-      pageTitle: "Reset Password",
-      errorMessage: err.message,
-      originalInput: {
-        email,
-      },
-      errors: ["email"],
-    });
+    if (err.code === "INVALIDEMAIL") {
+      res.status(422).render("auth/reset-password", {
+        path: "/reset-password",
+        pageTitle: "Reset Password",
+        errorMessage: err.message,
+        originalInput: {
+          email,
+        },
+        errors: ["email"],
+      });
+    }
+    return next(new ServerError(err));
   }
   return true;
 };
@@ -293,7 +308,7 @@ exports.postResetPassword = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postNewPassword = async (req, res) => {
+exports.postNewPassword = async (req, res, next) => {
   const { userId, resetToken, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -322,7 +337,11 @@ exports.postNewPassword = async (req, res) => {
       },
     });
     if (!user) {
-      throw new Error("Reset password link has expired. Please request a new password reset.");
+      const error = new Error(
+        "Reset password link has expired. Please request a new password reset."
+      );
+      error.code = "LINKEXPIRED";
+      throw error;
     }
     const hashedPassword = await bcrypt.hash(password, 12);
     if (!hashedPassword) {
@@ -336,9 +355,11 @@ exports.postNewPassword = async (req, res) => {
     req.flash("success", "Password has been updated. You can now log in with the new password.");
     res.redirect("/login");
   } catch (error) {
-    console.error(error);
-    req.flash("error", error.message);
-    res.redirect("/login");
+    if (error.code === "LINKEXPIRED") {
+      req.flash("error", error.message);
+      res.redirect("/login");
+    }
+    return next(new ServerError(error));
   }
   return true;
 };
