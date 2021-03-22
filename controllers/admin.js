@@ -24,7 +24,6 @@ exports.getAddProduct = (req, res) => {
     editing: false,
     product: {
       title: "",
-      imageUrl: "",
       description: "",
       price: "",
     },
@@ -34,7 +33,7 @@ exports.getAddProduct = (req, res) => {
 };
 
 exports.postAddProduct = async (req, res, next) => {
-  const productData = Object.assign(req.body);
+  const productData = { ...req.body };
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const errorsArr = errors.array();
@@ -48,9 +47,20 @@ exports.postAddProduct = async (req, res, next) => {
     });
     return false;
   }
+  if (!req.file) {
+    return res.status(422).render("admin/edit-product", {
+      pageTitle: "Add Product",
+      path: "/admin/add-product",
+      editing: false,
+      product: productData,
+      errorMessages: ["Please enter a valid image."],
+      errors: [],
+    });
+  }
   productData.userId = req.user;
+  productData.imageUrl = req.file.path;
   try {
-    const product = new Product(productData);
+    const product = new Product({ ...productData });
     await product.save();
   } catch (error) {
     return next(new ServerError(error));
@@ -121,7 +131,9 @@ exports.postEditProduct = async (req, res) => {
       throw error;
     }
     product.title = req.body.title;
-    product.imageUrl = req.body.imageUrl;
+    if (req.file) {
+      product.imageUrl = req.file.path;
+    }
     product.description = req.body.description;
     product.price = req.body.price;
     await product.save();
