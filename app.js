@@ -12,6 +12,7 @@ const multer = require("multer");
 
 const {
   handlePageNotFound,
+  handleUnauthorizedError,
   handleForbiddenError,
   handleServerError,
 } = require("./controllers/error");
@@ -91,6 +92,7 @@ app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
 
+app.use(handleUnauthorizedError);
 app.use(handleForbiddenError);
 app.use(handleServerError);
 app.use(handlePageNotFound);
