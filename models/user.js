@@ -47,7 +47,7 @@ userSchema.methods.addToCart = function addToCart(product) {
 };
 
 userSchema.methods.getCartProducts = async function getCartProducts() {
-  const populatedUser = await this.populate("cart.items.productId", "title").execPopulate();
+  const populatedUser = await this.populate("cart.items.productId").execPopulate();
   const items = populatedUser.cart.items.filter((item) => item.productId !== null);
 
   if (this.cart.items.length !== items.length) {

@@ -13,6 +13,22 @@ exports.handlePageNotFound = (req, res) => {
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ */
+
+exports.handleUnauthorizedError = (err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+  if (err.code !== 401) return next(err);
+  return res.status(401).render("errors/401", {
+    pageTitle: "Unauthorized",
+    path: "/401",
+  });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
 

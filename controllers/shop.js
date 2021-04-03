@@ -1,6 +1,11 @@
+const fs = require("fs");
+const path = require("path");
+
 const Product = require("../models/product");
 const Order = require("../models/order");
 const ServerError = require("../error/server-error");
+const UnauthorizedError = require("../error/unauthorized-error");
+const generateInvoice = require("../utils/invoice-generator");
 
 /**
  * @param {import('express').Request} req
@@ -79,7 +84,7 @@ exports.getProduct = async (req, res, next) => {
 exports.getOrders = async (req, res, next) => {
   let orders;
   try {
-    orders = await Order.find({ userId: req.user._id });
+    orders = await Order.find({ "user.userId": req.user._id });
   } catch (error) {
     return next(new ServerError(error));
   }
@@ -89,6 +94,43 @@ exports.getOrders = async (req, res, next) => {
     pageTitle: "Your Orders",
     path: "/orders",
   });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+exports.getInvoice = async (req, res, next) => {
+  const { orderId } = req.params;
+  try {
+    if (orderId.length !== 24) {
+      const error = new Error();
+      error.code = "ORDERNOTFOUND";
+      throw error;
+    }
+    const order = await Order.findById(orderId);
+    if (!order) {
+      const error = new Error();
+      error.code = "ORDERNOTFOUND";
+      throw error;
+    } else if (order.user.userId.toString() !== req.user._id.toString()) {
+      throw new UnauthorizedError();
+    }
+    const doc = generateInvoice(order);
+    const invoiceName = `invoice-${orderId}.pdf`;
+    const invoicePath = path.join("data", "invoices", invoiceName);
+    doc.pipe(fs.createWriteStream(invoicePath));
+    doc.pipe(res);
+    doc.end();
+  } catch (error) {
+    if (error.code === "ORDERNOTFOUND") {
+      next();
+    } else if (error.code === 401) {
+      next(error);
+    } else {
+      next(new ServerError());
+    }
+  }
 };
 
 /**
@@ -152,7 +194,13 @@ exports.postOrder = async (req, res, next) => {
         qty: product.qty,
       };
     });
-    const order = new Order({ userId: req.user, products: orderProducts });
+    const order = new Order({
+      user: {
+        email: req.user.email,
+        userId: req.user,
+      },
+      products: orderProducts,
+    });
     await order.save();
     await req.user.clearCart();
   } catch (error) {

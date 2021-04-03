@@ -5,6 +5,7 @@ const {
   getProducts,
   getProduct,
   getOrders,
+  getInvoice,
   getCart,
   postCart,
   postCartDeleteProduct,
@@ -21,6 +22,8 @@ router.get("/products", getProducts);
 router.get("/products/:productId", getProduct);
 
 router.get("/orders", isAuth, getOrders);
+
+router.get("/orders/:orderId", isAuth, getInvoice);
 
 router.get("/cart", isAuth, getCart);
 

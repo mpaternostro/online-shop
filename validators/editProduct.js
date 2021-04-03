@@ -17,7 +17,6 @@ module.exports = [
     .isLength({ max: TITLE_MAX_LENGTH })
     .withMessage(`Title must have less than ${TITLE_MAX_LENGTH} characters.`)
     .trim(),
-  body("imageUrl").isURL().withMessage("Please enter a valid image URL.").trim(),
   body("description")
     .notEmpty()
     .withMessage("Please enter a description.")

@@ -2,6 +2,7 @@ const { validationResult } = require("express-validator");
 const ServerError = require("../error/server-error");
 
 const Product = require("../models/product");
+const { deleteFile } = require("../utils/file");
 
 exports.getAdminProducts = async (req, res, next) => {
   let prods;
@@ -24,7 +25,6 @@ exports.getAddProduct = (req, res) => {
     editing: false,
     product: {
       title: "",
-      imageUrl: "",
       description: "",
       price: "",
     },
@@ -34,7 +34,7 @@ exports.getAddProduct = (req, res) => {
 };
 
 exports.postAddProduct = async (req, res, next) => {
-  const productData = Object.assign(req.body);
+  const productData = { ...req.body };
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const errorsArr = errors.array();
@@ -48,9 +48,20 @@ exports.postAddProduct = async (req, res, next) => {
     });
     return false;
   }
+  if (!req.file) {
+    return res.status(422).render("admin/edit-product", {
+      pageTitle: "Add Product",
+      path: "/admin/add-product",
+      editing: false,
+      product: productData,
+      errorMessages: ["Please enter a valid image."],
+      errors: [],
+    });
+  }
   productData.userId = req.user;
+  productData.imageUrl = req.file.path;
   try {
-    const product = new Product(productData);
+    const product = new Product({ ...productData });
     await product.save();
   } catch (error) {
     return next(new ServerError(error));
@@ -121,7 +132,10 @@ exports.postEditProduct = async (req, res) => {
       throw error;
     }
     product.title = req.body.title;
-    product.imageUrl = req.body.imageUrl;
+    if (req.file) {
+      deleteFile(product.imageUrl);
+      product.imageUrl = req.file.path;
+    }
     product.description = req.body.description;
     product.price = req.body.price;
     await product.save();
@@ -142,15 +156,22 @@ exports.postEditProduct = async (req, res) => {
   return true;
 };
 
-exports.postDeleteProduct = async (req, res) => {
+exports.postDeleteProduct = async (req, res, next) => {
   const { productId } = req.body;
   try {
-    const product = await Product.findOneAndDelete({ _id: productId, userId: req.user._id });
+    const product = await Product.findOne({ _id: productId, userId: req.user._id });
     if (!product) {
-      throw new Error("Could not delete the requested product");
+      const error = new Error("Could not find the requested product");
+      error.code = "PRODUCTNOTFOUND";
     }
+    deleteFile(product.imageUrl);
+    await product.delete();
     res.redirect("/admin/products");
   } catch (error) {
-    res.redirect("/");
+    if (error.code === "PRODUCTNOTFOUND") {
+      res.redirect("/admin/products");
+    } else {
+      next(new ServerError());
+    }
   }
 };

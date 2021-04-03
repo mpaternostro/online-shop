@@ -103,4 +103,9 @@ dist
 # TernJS port file
 .tern-port
 
+# VS Code configuration files
 .vscode
+
+# Server data and images
+/data
+/images
