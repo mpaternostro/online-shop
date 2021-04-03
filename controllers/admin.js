@@ -2,6 +2,7 @@ const { validationResult } = require("express-validator");
 const ServerError = require("../error/server-error");
 
 const Product = require("../models/product");
+const { deleteFile } = require("../utils/file");
 
 exports.getAdminProducts = async (req, res, next) => {
   let prods;
@@ -132,6 +133,7 @@ exports.postEditProduct = async (req, res) => {
     }
     product.title = req.body.title;
     if (req.file) {
+      deleteFile(product.imageUrl);
       product.imageUrl = req.file.path;
     }
     product.description = req.body.description;
@@ -154,15 +156,22 @@ exports.postEditProduct = async (req, res) => {
   return true;
 };
 
-exports.postDeleteProduct = async (req, res) => {
+exports.postDeleteProduct = async (req, res, next) => {
   const { productId } = req.body;
   try {
-    const product = await Product.findOneAndDelete({ _id: productId, userId: req.user._id });
+    const product = await Product.findOne({ _id: productId, userId: req.user._id });
     if (!product) {
-      throw new Error("Could not delete the requested product");
+      const error = new Error("Could not find the requested product");
+      error.code = "PRODUCTNOTFOUND";
     }
+    deleteFile(product.imageUrl);
+    await product.delete();
     res.redirect("/admin/products");
   } catch (error) {
-    res.redirect("/");
+    if (error.code === "PRODUCTNOTFOUND") {
+      res.redirect("/admin/products");
+    } else {
+      next(new ServerError());
+    }
   }
 };
