@@ -1,12 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 
-const PDFDocument = require("pdfkit");
-
 const Product = require("../models/product");
 const Order = require("../models/order");
 const ServerError = require("../error/server-error");
 const UnauthorizedError = require("../error/unauthorized-error");
+const generateInvoice = require("../utils/invoice-generator");
 
 /**
  * @param {import('express').Request} req
@@ -85,7 +84,7 @@ exports.getProduct = async (req, res, next) => {
 exports.getOrders = async (req, res, next) => {
   let orders;
   try {
-    orders = await Order.find({ userId: req.user._id });
+    orders = await Order.find({ "user.userId": req.user._id });
   } catch (error) {
     return next(new ServerError(error));
   }
@@ -114,17 +113,14 @@ exports.getInvoice = async (req, res, next) => {
       const error = new Error();
       error.code = "ORDERNOTFOUND";
       throw error;
-    } else if (order.userId.toString() !== req.user._id.toString()) {
+    } else if (order.user.userId.toString() !== req.user._id.toString()) {
       throw new UnauthorizedError();
     }
+    const doc = generateInvoice(order);
     const invoiceName = `invoice-${orderId}.pdf`;
     const invoicePath = path.join("data", "invoices", invoiceName);
-    const doc = new PDFDocument();
     doc.pipe(fs.createWriteStream(invoicePath));
     doc.pipe(res);
-
-    doc.text("Hello world!");
-
     doc.end();
   } catch (error) {
     if (error.code === "ORDERNOTFOUND") {
@@ -198,7 +194,13 @@ exports.postOrder = async (req, res, next) => {
         qty: product.qty,
       };
     });
-    const order = new Order({ userId: req.user, products: orderProducts });
+    const order = new Order({
+      user: {
+        email: req.user.email,
+        userId: req.user,
+      },
+      products: orderProducts,
+    });
     await order.save();
     await req.user.clearCart();
   } catch (error) {
