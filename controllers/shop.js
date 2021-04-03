@@ -1,6 +1,12 @@
+const fs = require("fs");
+const path = require("path");
+
+const PDFDocument = require("pdfkit");
+
 const Product = require("../models/product");
 const Order = require("../models/order");
 const ServerError = require("../error/server-error");
+const UnauthorizedError = require("../error/unauthorized-error");
 
 /**
  * @param {import('express').Request} req
@@ -89,6 +95,46 @@ exports.getOrders = async (req, res, next) => {
     pageTitle: "Your Orders",
     path: "/orders",
   });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+exports.getInvoice = async (req, res, next) => {
+  const { orderId } = req.params;
+  try {
+    if (orderId.length !== 24) {
+      const error = new Error();
+      error.code = "ORDERNOTFOUND";
+      throw error;
+    }
+    const order = await Order.findById(orderId);
+    if (!order) {
+      const error = new Error();
+      error.code = "ORDERNOTFOUND";
+      throw error;
+    } else if (order.userId.toString() !== req.user._id.toString()) {
+      throw new UnauthorizedError();
+    }
+    const invoiceName = `invoice-${orderId}.pdf`;
+    const invoicePath = path.join("data", "invoices", invoiceName);
+    const doc = new PDFDocument();
+    doc.pipe(fs.createWriteStream(invoicePath));
+    doc.pipe(res);
+
+    doc.text("Hello world!");
+
+    doc.end();
+  } catch (error) {
+    if (error.code === "ORDERNOTFOUND") {
+      next();
+    } else if (error.code === 401) {
+      next(error);
+    } else {
+      next(new ServerError());
+    }
+  }
 };
 
 /**
