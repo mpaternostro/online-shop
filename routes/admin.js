@@ -6,7 +6,7 @@ const {
   postAddProduct,
   getEditProduct,
   postEditProduct,
-  postDeleteProduct,
+  deleteProduct,
 } = require("../controllers/admin");
 const isAuth = require("../middlewares/is-auth");
 const editProduct = require("../validators/editProduct");
@@ -28,7 +28,7 @@ router.get("/edit-product/:productId", isAuth, getEditProduct);
 // /admin/edit-product/12345 => POST
 router.post("/edit-product/:productId", isAuth, editProduct, postEditProduct);
 
-// /admin/delete-product/12345 => POST
-router.post("/delete-product", isAuth, postDeleteProduct);
+// /product/12345 => DELETE
+router.delete("/product/:productId", isAuth, deleteProduct);
 
 module.exports = router;

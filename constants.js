@@ -1,2 +1,4 @@
 exports.PASSWORD_MIN_LENGTH = 6;
 exports.PASSWORD_MAX_LENGTH = 20;
+
+exports.ITEMS_PER_PAGE = 3;
