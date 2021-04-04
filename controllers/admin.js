@@ -160,22 +160,22 @@ exports.postEditProduct = async (req, res) => {
   return true;
 };
 
-exports.postDeleteProduct = async (req, res, next) => {
-  const { productId } = req.body;
+exports.deleteProduct = async (req, res) => {
+  const { productId } = req.params;
   try {
     const product = await Product.findOne({ _id: productId, userId: req.user._id });
     if (!product) {
-      const error = new Error("Could not find the requested product");
+      const error = new Error("Could not find the requested product.");
       error.code = "PRODUCTNOTFOUND";
     }
     deleteFile(product.imageUrl);
     await product.delete();
-    res.redirect("/admin/products");
+    res.status(200).json({ message: "Success!" });
   } catch (error) {
     if (error.code === "PRODUCTNOTFOUND") {
-      res.redirect("/admin/products");
+      res.status(500).json({ message: error });
     } else {
-      next(new ServerError());
+      res.status(500).json({ message: "Failed to delete product." });
     }
   }
 };
