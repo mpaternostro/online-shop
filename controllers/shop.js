@@ -6,24 +6,27 @@ const Order = require("../models/order");
 const ServerError = require("../error/server-error");
 const UnauthorizedError = require("../error/unauthorized-error");
 const generateInvoice = require("../utils/invoice-generator");
+const { getTotalProducts, getPageProducts, getLastPage } = require("../utils/products");
 
 /**
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
 exports.getIndex = async (req, res, next) => {
-  let prods;
+  const currentPage = Number(req.query.page) || 1;
   try {
-    prods = await Product.find();
+    const totalProducts = await getTotalProducts();
+    const prods = await getPageProducts(currentPage);
+    res.render("shop/index", {
+      prods,
+      pageTitle: "Online Shop",
+      path: "/",
+      currentPage,
+      lastPage: getLastPage(totalProducts),
+    });
   } catch (error) {
-    return next(new ServerError(error));
+    next(new ServerError(error));
   }
-
-  return res.render("shop/index", {
-    prods,
-    pageTitle: "Online Shop",
-    path: "/",
-  });
 };
 
 /**
@@ -31,18 +34,20 @@ exports.getIndex = async (req, res, next) => {
  * @param {import('express').Response} res
  */
 exports.getProducts = async (req, res, next) => {
-  let prods;
+  const currentPage = Number(req.query.page) || 1;
   try {
-    prods = await Product.find();
+    const totalProducts = await getTotalProducts();
+    const prods = await getPageProducts(currentPage);
+    res.render("shop/product-list", {
+      prods,
+      pageTitle: "Product List",
+      path: "/products",
+      currentPage,
+      lastPage: getLastPage(totalProducts),
+    });
   } catch (error) {
-    return next(new ServerError(error));
+    next(new ServerError(error));
   }
-
-  return res.render("shop/product-list", {
-    prods,
-    pageTitle: "Product List",
-    path: "/products",
-  });
 };
 
 /**

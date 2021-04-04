@@ -3,19 +3,23 @@ const ServerError = require("../error/server-error");
 
 const Product = require("../models/product");
 const { deleteFile } = require("../utils/file");
+const { getTotalProducts, getPageProducts, getLastPage } = require("../utils/products");
 
 exports.getAdminProducts = async (req, res, next) => {
-  let prods;
+  const currentPage = Number(req.query.page) || 1;
   try {
-    prods = await Product.find({ userId: req.user._id });
+    const totalProducts = await getTotalProducts(req.user._id);
+    const prods = await getPageProducts(currentPage, req.user._id);
+    res.render("admin/products", {
+      prods,
+      pageTitle: "Admin Products",
+      path: "/admin/products",
+      currentPage,
+      lastPage: getLastPage(totalProducts),
+    });
   } catch (error) {
-    return next(new ServerError(error));
+    next(new ServerError(error));
   }
-  return res.render("admin/products", {
-    prods,
-    pageTitle: "Admin Products",
-    path: "/admin/products",
-  });
 };
 
 exports.getAddProduct = (req, res) => {
