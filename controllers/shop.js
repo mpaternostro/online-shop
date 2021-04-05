@@ -6,7 +6,12 @@ const Order = require("../models/order");
 const ServerError = require("../error/server-error");
 const UnauthorizedError = require("../error/unauthorized-error");
 const generateInvoice = require("../utils/invoice-generator");
-const { getTotalProducts, getPageProducts, getLastPage } = require("../utils/products");
+const {
+  getTotalProducts,
+  getPageProducts,
+  getLastPage,
+  getTotalSum,
+} = require("../utils/products");
 
 /**
  * @param {import('express').Request} req
@@ -155,6 +160,25 @@ exports.getCart = async (req, res, next) => {
     pageTitle: "Your Cart",
     path: "/cart",
   });
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+exports.getCheckout = async (req, res, next) => {
+  try {
+    const products = await req.user.getCartProducts();
+    const totalSum = getTotalSum(products);
+    res.render("shop/checkout", {
+      products,
+      totalSum,
+      pageTitle: "Checkout",
+      path: "/checkout",
+    });
+  } catch (error) {
+    next(new ServerError(error));
+  }
 };
 
 /**
