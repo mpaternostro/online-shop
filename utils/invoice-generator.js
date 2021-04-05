@@ -14,13 +14,15 @@ function generateInvoice(order) {
     const productTotalPrice = prod.product.price * prod.qty;
     totalPrice += productTotalPrice;
     doc.text(
-      `${prod.product.title} - $ ${prod.product.price} x ${prod.qty} = $ ${productTotalPrice}`
+      `${prod.product.title} - $ ${prod.product.price} x ${
+        prod.qty
+      } = $ ${productTotalPrice.toFixed(2)}`
     );
   });
   doc.text(" ", {
     lineGap: 10,
   });
-  doc.fontSize(20).text(`Total price: $ ${totalPrice}`);
+  doc.fontSize(20).text(`Total price: $ ${totalPrice.toFixed(2)}`);
   return doc;
 }
 

@@ -34,14 +34,16 @@ function getLastPage(totalProducts) {
  * @param {Array} products
  * @returns {Number}
  */
-function getTotalSum(products) {
-  return products.reduce((accumulator, currentValue) => {
-    const productTotalPrice = currentValue.qty * currentValue.productId.price;
-    return accumulator + productTotalPrice;
-  }, 0);
+function getProductsTotalSum(products) {
+  return products
+    .reduce((accumulator, currentValue) => {
+      const productTotalPrice = currentValue.qty * currentValue.productId.price;
+      return accumulator + productTotalPrice;
+    }, 0)
+    .toFixed(2);
 }
 
 exports.getTotalProducts = getTotalProducts;
 exports.getPageProducts = getPageProducts;
 exports.getLastPage = getLastPage;
-exports.getTotalSum = getTotalSum;
+exports.getProductsTotalSum = getProductsTotalSum;
