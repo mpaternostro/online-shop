@@ -17,15 +17,21 @@
         <hr>
         <div class="centered">
           <h2>Total: $ <%= totalSum %></h2>
-          <form action="/create-order" method="POST">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            
-            <button type="submit" class="btn">Order Now!</button>
-          </form>
+          <button id="checkout-button" type="submit" class="btn">Order Now!</button>
         </div>
       </ul>
     <% } else { %>
       <h1>Your cart is empty. Add items before checkout.</h1>
     <% } %>
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?version=3.52.1&features=fetch"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+      const stripe = Stripe("<%= stripePublishableKey %>");
+      const checkoutButton = document.getElementById("checkout-button");
+      checkoutButton.addEventListener('click', () => {
+        stripe.redirectToCheckout({ sessionId: "<%= sessionId %>" });
+      });
+    </script>
   </main>
 <%- include('../includes/end.ejs') %>
