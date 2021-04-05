@@ -1,12 +1,19 @@
 const fs = require("fs");
 const path = require("path");
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 const Product = require("../models/product");
 const Order = require("../models/order");
 const ServerError = require("../error/server-error");
 const UnauthorizedError = require("../error/unauthorized-error");
 const generateInvoice = require("../utils/invoice-generator");
-const { getTotalProducts, getPageProducts, getLastPage } = require("../utils/products");
+const {
+  getTotalProducts,
+  getPageProducts,
+  getLastPage,
+  getProductsTotalSum,
+} = require("../utils/products");
 
 /**
  * @param {import('express').Request} req
@@ -161,6 +168,44 @@ exports.getCart = async (req, res, next) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
+exports.getCheckout = async (req, res, next) => {
+  try {
+    const products = await req.user.getCartProducts();
+    const stripeSession = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: products.map((product) => ({
+        price_data: {
+          currency: "usd",
+          unit_amount: product.productId.price.toString().replace(".", ""),
+          product_data: {
+            name: product.productId.title,
+            description: product.productId.description,
+          },
+        },
+        quantity: product.qty,
+      })),
+      mode: "payment",
+      success_url: `${req.protocol}://${req.get("host")}/create-order`,
+      cancel_url: `${req.protocol}://${req.get("host")}/checkout`,
+    });
+    const totalSum = getProductsTotalSum(products);
+    res.render("shop/checkout", {
+      products,
+      totalSum,
+      pageTitle: "Checkout",
+      path: "/checkout",
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+      sessionId: stripeSession.id,
+    });
+  } catch (error) {
+    next(new ServerError(error));
+  }
+};
+
+/**
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
 exports.postCart = async (req, res, next) => {
   const { productId } = req.body;
   try {
@@ -190,7 +235,7 @@ exports.postCartDeleteProduct = async (req, res, next) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.postOrder = async (req, res, next) => {
+exports.getCreateOrder = async (req, res, next) => {
   try {
     const products = await req.user.getCartProducts();
     const orderProducts = products.map((product) => {
