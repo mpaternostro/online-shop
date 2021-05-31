@@ -1,5 +1,6 @@
 require("dotenv").config();
 const path = require("path");
+const fs = require("fs");
 
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -11,6 +12,7 @@ const flash = require("connect-flash");
 const multer = require("multer");
 const helmet = require("helmet");
 const compression = require("compression");
+const morgan = require("morgan");
 
 const {
   handlePageNotFound,
@@ -92,6 +94,14 @@ app.use((req, res, next) => {
 });
 
 app.use(helmet());
+
+const accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), { flags: "a" });
+
+app.use(
+  morgan("combined", {
+    stream: accessLogStream,
+  })
+);
 
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
