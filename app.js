@@ -9,6 +9,8 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const csrf = require("csurf");
 const flash = require("connect-flash");
 const multer = require("multer");
+const helmet = require("helmet");
+const compression = require("compression");
 
 const {
   handlePageNotFound,
@@ -56,6 +58,7 @@ const authRoutes = require("./routes/auth");
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(multer({ storage, fileFilter }).single("image"));
+app.use(compression());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/images/", express.static(path.join(__dirname, "images")));
 app.use(
@@ -87,6 +90,8 @@ app.use((req, res, next) => {
   app.locals.csrfToken = req.csrfToken();
   next();
 });
+
+app.use(helmet());
 
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
