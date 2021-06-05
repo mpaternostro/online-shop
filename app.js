@@ -23,7 +23,6 @@ const {
 const User = require("./models/user");
 
 const app = express();
-const port = 3000;
 const store = new MongoDBStore({
   uri: process.env.MONGO_DB_URI,
   collection: "sessions",
@@ -117,8 +116,9 @@ app.use(handlePageNotFound);
     process.env.MONGO_DB_URI,
     { useUnifiedTopology: true, useNewUrlParser: true, useCreateIndex: true },
     async () => {
-      app.listen(port, async () => {
-        console.log(`Server listening at http://localhost:${port}`);
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, async () => {
+        console.log(`Server listening at http://localhost:${PORT}`);
       });
     }
   );
