@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Este proyecto está basado en el proyecto de tienda online del [curso de Maximilian Schwarzmüller para Node.js](https://www.udemy.com/course/nodejs-the-complete-guide/).",
   "main": "app.js",
+  "engines": {
+    "node": "15.11.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start-dev": "nodemon app.js --ext js,ejs,html ",
